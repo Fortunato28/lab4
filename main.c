@@ -19,11 +19,23 @@ void fill_with_random_values(int* matrix, size_t elements_amount)
     }
 }
 
+// Заполнение матрицы нулями
+// matrix - указатель на матрицу
+// elements_amount - количество элементов в матрице
+void fill_zero(int* matrix, size_t elements_amount)
+{
+    for(size_t i = 0; i < elements_amount; ++i)
+    {
+
+        matrix[i] = 0;
+    }
+}
+
 // Вывод матрицы на экран
 // output - указатель на начало матрицы
 // l_num - количество строк
 // с_num - количество столбцов
-void print_matrix(int* output, size_t l_num, size_t c_num)
+void print_matrix(int* output, size_t l_num, size_t c_num, int pid)
 {
     for(size_t i = 0; i < l_num; ++i)
     {
@@ -33,21 +45,8 @@ void print_matrix(int* output, size_t l_num, size_t c_num)
         }
         printf("\n");
     }
-}
 
-// Сложение двух соседних строк матрицы
-// input_lines - указатель на первый элемент
-// c_num - количество столбцов
-void add_adjacent_lines(int* input_lines, size_t c_num, int* result)
-{
-    print_matrix(input_lines, 1, c_num);
-    for(size_t i = 0; i < c_num; ++i)
-    {
-        result[i] = input_lines[i] + input_lines[i + c_num];
-    }
-
-    //printf("Result:\n");
-    //print_matrix(result, 1, c_num);
+    printf("I`m process %d!\n\n", pid);
 }
 
 int main (int argc, char* argv[])
@@ -65,9 +64,13 @@ int main (int argc, char* argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
     // Matrix
-    size_t l_num;
+    size_t l_num = 6;
     size_t c_num = 5;
     int* matrix;
+
+    matrix = (int*)malloc(l_num * c_num * sizeof(int));
+    fill_zero(matrix, l_num * c_num);
+    print_matrix(matrix, l_num, c_num, world_rank);
 
     // Part of matrix
     size_t needed_columns = 3;
@@ -76,21 +79,15 @@ int main (int argc, char* argv[])
     // Initialize matrix only in main process
     if(world_rank == 0)
     {
-        printf("Enter an number of lines!\n");
-        scanf("%zu", &l_num);
-
-        printf("l_num = %zu\n", l_num);
-
         //TODO: Создать ограничение на минимальное количество процессов.
         // Если процессов меньше необходимого - аварийно завершать программу.
         // Если сильно больше - тоже как-то прервать.
 
         // Create the matrix
-        matrix = (int*)malloc(l_num * c_num * sizeof(int));
         fill_with_random_values(matrix, l_num * c_num);
         
         printf("Matrix:\n");
-        print_matrix(matrix, l_num, c_num);
+        print_matrix(matrix, l_num, c_num, world_rank);
 
         // Create needed columns
         three_columns = (int*)malloc(l_num * needed_columns * sizeof(int));
@@ -112,7 +109,7 @@ int main (int argc, char* argv[])
         }
 
         printf("Needed part of matrix:\n");
-        print_matrix(three_columns, l_num, needed_columns);
+        print_matrix(three_columns, l_num, needed_columns, world_rank);
     }
 
     // For each process, create a buffer that will hold two lines of entire matrix
@@ -127,9 +124,10 @@ int main (int argc, char* argv[])
     {
         printf("Result matrix:\n");
 
-        free(matrix);
         free(three_columns);
     }
+
+    free(matrix);
     free(two_lines);
     free(added_lines);
 
