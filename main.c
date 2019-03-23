@@ -81,7 +81,7 @@ int main (int argc, char* argv[])
     
     // MPI derived type
     MPI_Datatype mpi_three_columns;
-    MPI_Type_vector(l_num, 3, needed_columns, MPI_INT, &mpi_three_columns);
+    MPI_Type_vector(l_num, needed_columns, needed_columns, MPI_INT, &mpi_three_columns);
     MPI_Type_commit(&mpi_three_columns);
 
     // Initialize matrix only in main process
@@ -123,16 +123,17 @@ int main (int argc, char* argv[])
     {
         printf("Sending data to process 1\n");
         MPI_Send(three_columns, 1, mpi_three_columns, 1, 0, MPI_COMM_WORLD);
-        //MPI_Recv(&recdata, 1, my_type, 1, 0, MPI_COMM_WORLD, &status);
-        //printf("Received message with values %3.1f  %3.1f  and %d from process %d\n", \
-        recdata.a, recdata.b, recdata.n, status.MPI_SOURCE);
+        MPI_Send(three_columns, 1, mpi_three_columns, 1, 1, MPI_COMM_WORLD);
     }
 
     else 
     {
         MPI_Recv(three_columns, 1, mpi_three_columns, 0, 0, MPI_COMM_WORLD, &status);
         print_matrix(three_columns, l_num, needed_columns, world_rank);
-        //MPI_Send(&indata, 1, my_type, 0, 0, MPI_COMM_WORLD);
+
+        int buff[l_num * needed_columns];
+        MPI_Recv(buff, l_num * needed_columns, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+        print_matrix(buff, l_num, needed_columns, world_rank);
     }
 
     //if(world_rank == 0)
