@@ -75,6 +75,11 @@ int main (int argc, char* argv[])
     // Part of matrix
     size_t needed_columns = 3;
     int* three_columns;
+    
+    // MPI derived type
+    MPI_Datatype mpi_three_columns;
+    MPI_Type_vector(l_num, 1, needed_columns, MPI_INT, &mpi_three_columns);
+    MPI_Type_commit(&mpi_three_columns);
 
     // Initialize matrix only in main process
     if(world_rank == 0)
@@ -122,12 +127,13 @@ int main (int argc, char* argv[])
 
     if(world_rank == 0)
     {
-        printf("Result matrix:\n");
-
         free(three_columns);
     }
 
     free(matrix);
+    MPI_Type_free(&mpi_three_columns);
+
+    // TODO: delete it?
     free(two_lines);
     free(added_lines);
 

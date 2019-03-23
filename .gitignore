@@ -31,3 +31,5 @@
 *.out
 *.appe[ignore]
 
+# Vim
+*.swp
