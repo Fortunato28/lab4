@@ -70,15 +70,18 @@ int main (int argc, char* argv[])
 
     matrix = (int*)malloc(l_num * c_num * sizeof(int));
     fill_zero(matrix, l_num * c_num);
-    print_matrix(matrix, l_num, c_num, world_rank);
+    //print_matrix(matrix, l_num, c_num, world_rank);
 
     // Part of matrix
     size_t needed_columns = 3;
     int* three_columns;
     
+    // Create needed columns
+    three_columns = (int*)malloc(l_num * needed_columns * sizeof(int));
+    
     // MPI derived type
     MPI_Datatype mpi_three_columns;
-    MPI_Type_vector(l_num, 1, needed_columns, MPI_INT, &mpi_three_columns);
+    MPI_Type_vector(l_num, 3, needed_columns, MPI_INT, &mpi_three_columns);
     MPI_Type_commit(&mpi_three_columns);
 
     // Initialize matrix only in main process
@@ -93,9 +96,6 @@ int main (int argc, char* argv[])
         
         printf("Matrix:\n");
         print_matrix(matrix, l_num, c_num, world_rank);
-
-        // Create needed columns
-        three_columns = (int*)malloc(l_num * needed_columns * sizeof(int));
 
         printf("\n");
 
@@ -117,25 +117,31 @@ int main (int argc, char* argv[])
         print_matrix(three_columns, l_num, needed_columns, world_rank);
     }
 
-    // For each process, create a buffer that will hold two lines of entire matrix
-    // TODO change 4 to c_num (complicated, in workers process have no c_num)
-    int two_lines_size = 2 * c_num;
-    int* two_lines = (int*)malloc(two_lines_size * sizeof(int));
+    MPI_Status status;
 
-    // Result line
-    int* added_lines = (int*)malloc(c_num * sizeof(int));
+    if(world_rank == 0) 
+    {
+        printf("Sending data to process 1\n");
+        MPI_Send(three_columns, 1, mpi_three_columns, 1, 0, MPI_COMM_WORLD);
+        //MPI_Recv(&recdata, 1, my_type, 1, 0, MPI_COMM_WORLD, &status);
+        //printf("Received message with values %3.1f  %3.1f  and %d from process %d\n", \
+        recdata.a, recdata.b, recdata.n, status.MPI_SOURCE);
+    }
 
-    if(world_rank == 0)
+    else 
+    {
+        MPI_Recv(three_columns, 1, mpi_three_columns, 0, 0, MPI_COMM_WORLD, &status);
+        print_matrix(three_columns, l_num, needed_columns, world_rank);
+        //MPI_Send(&indata, 1, my_type, 0, 0, MPI_COMM_WORLD);
+    }
+
+    //if(world_rank == 0)
     {
         free(three_columns);
     }
 
     free(matrix);
     MPI_Type_free(&mpi_three_columns);
-
-    // TODO: delete it?
-    free(two_lines);
-    free(added_lines);
 
     MPI_Finalize();
     return 0;
