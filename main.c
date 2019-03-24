@@ -94,10 +94,8 @@ int main (int argc, char* argv[])
         // Create the matrix
         fill_with_random_values(matrix, l_num * c_num);
         
-        printf("Matrix:\n");
+        printf("Original matrix:\n");
         print_matrix(matrix, l_num, c_num, world_rank);
-
-        printf("\n");
 
         size_t j  = 0;
         for(size_t line_counter = 1; line_counter < l_num * c_num; line_counter += 5)
@@ -113,34 +111,57 @@ int main (int argc, char* argv[])
                 j += 3;
         }
 
-        printf("Needed part of matrix:\n");
-        print_matrix(three_columns, l_num, needed_columns, world_rank);
     }
 
     MPI_Status status;
 
+    printf("____________________________________________________\n");
+    printf("Start communication!\n");
+
     if(world_rank == 0) 
     {
-        printf("Sending data to process 1\n");
+        printf("Needed part of matrix:\n");
+        print_matrix(three_columns, l_num, needed_columns, world_rank);
+
+        // Sending data to process 1 (with derived datatype)
         MPI_Send(three_columns, 1, mpi_three_columns, 1, 0, MPI_COMM_WORLD);
+
+        // Sending data to process 1 again
         MPI_Send(three_columns, 1, mpi_three_columns, 1, 1, MPI_COMM_WORLD);
+
+        int buff[l_num * needed_columns];
+        fill_zero(buff, l_num * needed_columns);
+
+        MPI_Recv(buff, 1, mpi_three_columns, 1, 2, MPI_COMM_WORLD, &status);
+        printf("Geting data from process 1 (stored via derived datatype):\n");
+        print_matrix(buff, l_num, needed_columns, world_rank);
+        printf("____________________________________________________\n");
     }
 
     else 
     {
-        MPI_Recv(three_columns, 1, mpi_three_columns, 0, 0, MPI_COMM_WORLD, &status);
+        printf("Needed part of matrix:\n");
+        fill_zero(three_columns, needed_columns * l_num);
         print_matrix(three_columns, l_num, needed_columns, world_rank);
 
+        printf("Getting data from process 0 (stored via derived datatype):\n");
+        MPI_Recv(three_columns, 1, mpi_three_columns, 0, 0, MPI_COMM_WORLD, &status);
+        print_matrix(three_columns, l_num, needed_columns, world_rank);
+        printf("____________________________________________________\n");
+
         int buff[l_num * needed_columns];
+        fill_zero(buff, l_num * needed_columns);
+
         MPI_Recv(buff, l_num * needed_columns, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
+        printf("Geting data from process 0 (stored via base datatype):\n");
         print_matrix(buff, l_num, needed_columns, world_rank);
+        printf("____________________________________________________\n");
+
+        // Sending data to process 0
+        MPI_Send(three_columns, needed_columns * l_num, MPI_INT, 0, 2, MPI_COMM_WORLD);
     }
 
-    //if(world_rank == 0)
-    {
-        free(three_columns);
-    }
-
+    free(three_columns);
     free(matrix);
     MPI_Type_free(&mpi_three_columns);
 
