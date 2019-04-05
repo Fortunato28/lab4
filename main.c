@@ -15,7 +15,7 @@ void fill_with_random_values(int* matrix, size_t elements_amount)
     for(size_t i = 0; i < elements_amount; ++i)
     {
 
-        matrix[i] = rand() % 10;
+        matrix[i] = i + 1;
     }
 }
 
